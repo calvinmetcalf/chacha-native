@@ -46,10 +46,10 @@ void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const 
 void chacha20_counter_set(chacha20_ctx *ctx, uint64_t counter);
 
 //Raw keystream for the current block, convert output to uint8_t[] for individual bytes. Counter is incremented upon use
-void chacha20_block(chacha20_ctx *ctx, uint32_t output[16]);
+int chacha20_block(chacha20_ctx *ctx, uint32_t output[16]);
 
 //Encrypt an arbitrary amount of plaintext, call continuously as needed
-void chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length);
+int chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length);
 
 //Decrypt an arbitrary amount of ciphertext. Actually, for chacha20, decryption is the same function as encryption
 void chacha20_decrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length);

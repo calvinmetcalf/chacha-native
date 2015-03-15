@@ -38,7 +38,7 @@ NAN_METHOD(Chacha::New) {
     if (len != 32) {
       return NanThrowError("invalid key length");
     }
-    if (ivlen != 8) {
+    if (ivlen != 12) {
       return NanThrowError("invalid nonce length");
     }
     chacha20_ctx ctx;
@@ -66,7 +66,9 @@ NAN_METHOD(Chacha::Update) {
   unsigned char* input = reinterpret_cast<unsigned char*>(Buffer::Data(args[0]));
   size_t len = Buffer::Length(args[0]);
   unsigned char* out = new unsigned char[len];
-  chacha20_encrypt(&obj->ctx_, input, out, len);
+  if (chacha20_encrypt(&obj->ctx_, input, out, len) == 1) {
+    return NanThrowError("counter exausted");
+  };
   Local<Value> res = NanNewBufferHandle(reinterpret_cast<char*>(out), len);
   NanReturnValue(NanNew(res));
 }

@@ -1,16 +1,22 @@
 var Chacha = require('./addon');
-var key = new Buffer(32);
-key.fill(0);
-var iv = new Buffer(8);
-iv.fill(0);
-var obj = new Chacha(key, iv);
-var key2 = new Buffer(32);
-key2.fill(0);
-var iv2 = new Buffer(8);
-iv2.fill(0);
-var obj2 = new Chacha(key2, iv2);
-var zero = new Buffer(7);
-zero.fill(0);
-console.log( obj2.update(obj.update(zero)) ); // 11
-console.log(  obj2.update(obj.update(zero))  ); // 12
-console.log(  obj2.update(obj.update(zero.slice(3)))  ); // 13
+var Chachajs = require('chacha/chachastream');
+var test = require('tape');
+var crypto = require('crypto');
+
+var i = 0;
+function testIt(t) {
+	t.plan(2);
+	var key = crypto.randomBytes(32);
+	var iv =crypto.randomBytes(12);
+	var c = new Chacha(key, iv);
+	var c2 = new Chacha(key, iv);
+	var js = new Chachajs(key, iv);
+	var data = new Buffer(93);
+	data.fill(0);
+	var js4 = js.update(data).toString('hex');
+	t.equals(c.update(data).toString('hex'), js4);
+	t.equals(c2.update(data).toString('hex'), js4);
+}
+while (i++ < 10) {
+	test('round ' + i, testIt)
+}
