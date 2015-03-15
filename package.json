@@ -1,0 +1,10 @@
+{
+  "name": "chacha_native",
+  "version": "0.0.0",
+  "main": "addon.js",
+  "gypfile": true,
+  "dependencies": {
+    "bindings": "~1.2.1",
+    "nan": "~1.7.0"
+  }
+}
