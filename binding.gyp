@@ -1,9 +1,9 @@
 {
   "targets": [
     {
-      "target_name": "chacha",
+      "target_name": "chacha20poly1305",
       "sources": [
-        "src/binding.cc",
+        "src/chacha20poly1305.cc",
         "src/chacha20_simple.cc",
         "src/chacha.cc",
         "src/poly.cc",
