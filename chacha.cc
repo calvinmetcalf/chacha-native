@@ -7,7 +7,7 @@ Persistent<Function> Chacha::constructor;
 
 Chacha::Chacha() {};
 Chacha::~Chacha() {};
-void Chacha::Init(Handle<Object> module) {
+void Chacha::Init(Handle<Object> exports) {
   NanScope();
 
   // Prepare constructor template
@@ -19,7 +19,7 @@ void Chacha::Init(Handle<Object> module) {
   NODE_SET_PROTOTYPE_METHOD(tpl, "update", Update);
 
   NanAssignPersistent(constructor, tpl->GetFunction());
-  module->Set(NanNew("exports"), tpl->GetFunction());
+  exports->Set(NanNew("Chacha"), tpl->GetFunction());
 }
 
 NAN_METHOD(Chacha::New) {
@@ -66,7 +66,7 @@ NAN_METHOD(Chacha::Update) {
   unsigned char* input = reinterpret_cast<unsigned char*>(Buffer::Data(args[0]));
   size_t len = Buffer::Length(args[0]);
   unsigned char* out = new unsigned char[len];
-  if (chacha20_encrypt(&obj->ctx_, input, out, len) == 1) {
+  if (!chacha20_encrypt(&obj->ctx_, input, out, len)) {
     return NanThrowError("counter exausted");
   };
   Local<Value> res = NanNewBufferHandle(reinterpret_cast<char*>(out), len);

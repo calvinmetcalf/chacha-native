@@ -17,13 +17,12 @@ This implementation is intended to be simple, many optimizations can be performe
 */
 
 #include <string.h>
+#include <stdbool.h>
 #include "chacha20_simple.h"
 const char *constants = "expand 32-byte k";
 
 void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const uint8_t *nonce)
 {
-  const char *constants = (length == 32) ? "expand 32-byte k" : "expand 16-byte k";
-
   ctx->schedule[0] = LE(constants + 0);
   ctx->schedule[1] = LE(constants + 4);
   ctx->schedule[2] = LE(constants + 8);
@@ -58,7 +57,7 @@ void chacha20_counter_set(chacha20_ctx *ctx, uint64_t counter)
     x[a] += x[b]; x[d] = ROTL32(x[d] ^ x[a], 8); \
     x[c] += x[d]; x[b] = ROTL32(x[b] ^ x[c], 7);
 
-int chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
+bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
 {
   uint32_t *const nonce = ctx->schedule+12; //12 is where the 128 bit counter is
   int i = 10;
@@ -88,8 +87,8 @@ int chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
   This implementation will remain compatible with the official up to 2^64 blocks, and past that point, the official is not intended to be used.
   This implementation with this change also allows this algorithm to become compatible for a Fortuna-like construct.
   */
-  if (!++nonce[0]) { return 1; }
-  return 0;
+  if (!++nonce[0]) { return false; }
+  return true;
 }
 
 static inline void chacha20_xor(uint8_t *keystream, const uint8_t **in, uint8_t **out, size_t length)
@@ -98,7 +97,7 @@ static inline void chacha20_xor(uint8_t *keystream, const uint8_t **in, uint8_t 
   do { *(*out)++ = *(*in)++ ^ *keystream++; } while (keystream < end_keystream);
 }
 
-int chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length)
+bool chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length)
 {
   if (length)
   {
@@ -117,15 +116,15 @@ int chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t 
     while (length)
     {
       size_t amount = MIN(length, sizeof(ctx->keystream));
-      if (chacha20_block(ctx, ctx->keystream) == 1){
-        return 1;
+      if (!chacha20_block(ctx, ctx->keystream)){
+        return false;
       }
       chacha20_xor(k, &in, &out, amount);
       length -= amount;
       ctx->available = sizeof(ctx->keystream) - amount;
     }
   }
-  return 0;
+  return true;
 }
 
 void chacha20_decrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length)

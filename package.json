@@ -1,7 +1,8 @@
 {
-  "name": "chacha_native",
-  "version": "0.0.0",
-  "main": "addon.js",
+  "name": "chacha-native",
+  "version": "1.0.0",
+  "description": "native chacha20/poly1305 bindings in nodejs",
+  "main": "index.js",
   "gypfile": true,
   "scripts": {
     "build": "node-gyp rebuild",
@@ -12,7 +13,7 @@
     "nan": "~1.7.0"
   },
   "devDependencies": {
-    "chacha": "^1.1.1",
+    "chacha": "^1.1.2",
     "tap-spec": "^2.2.2",
     "tape": "^3.5.0"
   }
