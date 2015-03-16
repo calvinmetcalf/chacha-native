@@ -1,5 +1,5 @@
 'use strict';
-var lib = require('./index');
+var lib = require('./lib');
 var jslib = require('chacha');
 var Chacha = lib.chacha20;
 var Chachajs = jslib.chacha20;

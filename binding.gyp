@@ -1,14 +1,14 @@
 {
   "targets": [
     {
-      "target_name": "addon",
+      "target_name": "chacha",
       "sources": [
-        "addon.cc",
-        "chacha20_simple.c",
-        "chacha.cc",
-        "poly.cc",
-        "poly1305-donna.c",
-        "aead.cc"
+        "src/binding.cc",
+        "src/chacha20_simple.cc",
+        "src/chacha.cc",
+        "src/poly.cc",
+        "src/poly1305-donna.cc",
+        "src/aead.cc"
         ],
       "include_dirs": [
         "<!(node -e \"require('nan')\")"

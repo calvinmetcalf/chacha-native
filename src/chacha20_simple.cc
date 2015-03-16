@@ -44,13 +44,6 @@ void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const 
   ctx->available = 0;
 }
 
-void chacha20_counter_set(chacha20_ctx *ctx, uint64_t counter)
-{
-  ctx->schedule[12] = counter & UINT32_C(0xFFFFFFFF);
-  ctx->schedule[13] = counter >> 32;
-  ctx->available = 0;
-}
-
 #define QUARTERROUND(x, a, b, c, d) \
     x[a] += x[b]; x[d] = ROTL32(x[d] ^ x[a], 16); \
     x[c] += x[d]; x[b] = ROTL32(x[b] ^ x[c], 12); \
@@ -125,9 +118,4 @@ bool chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t
     }
   }
   return true;
-}
-
-void chacha20_decrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length)
-{
-  chacha20_encrypt(ctx, in, out, length);
 }

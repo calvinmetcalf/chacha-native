@@ -42,17 +42,11 @@ typedef struct
 //Call this to initilize a chacha20_ctx, must be called before all other functions
 void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const uint8_t *nonce);
 
-//Call this if you need to process a particular block number
-void chacha20_counter_set(chacha20_ctx *ctx, uint64_t counter);
-
 //Raw keystream for the current block, convert output to uint8_t[] for individual bytes. Counter is incremented upon use
 bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16]);
 
 //Encrypt an arbitrary amount of plaintext, call continuously as needed
 bool chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length);
-
-//Decrypt an arbitrary amount of ciphertext. Actually, for chacha20, decryption is the same function as encryption
-void chacha20_decrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length);
 
 #ifdef __cplusplus
 }
