@@ -2,7 +2,7 @@
 #define AEAD_H
 
 #include <nan.h>
-#include "chacha20_simple.h"
+#include "chacha20_complex.h"
 #include "poly1305-donna.h"
 
 class AEAD : public node::ObjectWrap {

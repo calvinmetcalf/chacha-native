@@ -1,16 +1,16 @@
-#ifndef CHACHA_H
-#define CHACHA_H
+#ifndef CHACHA2_H
+#define CHACHA2_H
 
 #include <nan.h>
-#include "chacha20_complex.h"
+#include "chacha20_simple.h"
 
-class Chacha : public node::ObjectWrap {
+class Chacha2 : public node::ObjectWrap {
  public:
   static void Init(v8::Handle<v8::Object> exports);
 
  private:
-  Chacha();
-  ~Chacha();
+  Chacha2();
+  ~Chacha2();
 
   static NAN_METHOD(New);
   static NAN_METHOD(Update);

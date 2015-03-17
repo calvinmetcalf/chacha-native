@@ -19,7 +19,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
-
+#include <gsimd.h>
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
@@ -28,7 +28,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 extern "C"
 {
 #endif
-
+typedef svec<4,uint32_t> uint32x4;
 typedef struct
 {
   uint32_t schedule[16];
@@ -36,6 +36,13 @@ typedef struct
   size_t available;
 } chacha20_ctx;
 
+typedef struct
+{
+  uint32x4 a;
+  uint32x4 b;
+  uint32x4 c;
+  uint32x4 d;
+} simd_ctx;
 //Call this to initilize a chacha20_ctx, must be called before all other functions
 void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const uint8_t *nonce);
 

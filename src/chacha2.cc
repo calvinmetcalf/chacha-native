@@ -1,27 +1,27 @@
-#include "chacha.h"
+#include "chacha2.h"
 
 using namespace v8;
 using namespace node;
-Persistent<Function> Chacha::constructor;
+Persistent<Function> Chacha2::constructor;
 
-Chacha::Chacha() {};
-Chacha::~Chacha() {};
-void Chacha::Init(Handle<Object> exports) {
+Chacha2::Chacha2() {};
+Chacha2::~Chacha2() {};
+void Chacha2::Init(Handle<Object> exports) {
   NanScope();
 
   // Prepare constructor template
   Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(New);
-  tpl->SetClassName(NanNew("Chacha"));
+  tpl->SetClassName(NanNew("Chacha2"));
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
   // Prototype
   NODE_SET_PROTOTYPE_METHOD(tpl, "update", Update);
 
   NanAssignPersistent(constructor, tpl->GetFunction());
-  exports->Set(NanNew("Chacha"), tpl->GetFunction());
+  exports->Set(NanNew("Chacha2"), tpl->GetFunction());
 }
 
-NAN_METHOD(Chacha::New) {
+NAN_METHOD(Chacha2::New) {
   NanScope();
 
   if (args.IsConstructCall()) {
@@ -42,7 +42,7 @@ NAN_METHOD(Chacha::New) {
     }
     chacha20_ctx ctx;
     chacha20_setup(&ctx, key, len, iv);
-    Chacha* obj = new Chacha();
+    Chacha2* obj = new Chacha2();
     obj->ctx_ = ctx;
     obj->Wrap(args.This());
     NanReturnValue(args.This());
@@ -54,10 +54,10 @@ NAN_METHOD(Chacha::New) {
   }
 }
 
-NAN_METHOD(Chacha::Update) {
+NAN_METHOD(Chacha2::Update) {
   NanScope();
 
-  Chacha* obj = ObjectWrap::Unwrap<Chacha>(args.Holder());
+  Chacha2* obj = ObjectWrap::Unwrap<Chacha2>(args.Holder());
   if (args.Length() != 1 ||
         !Buffer::HasInstance(args[0]) ) {
       return NanThrowError("must supply buffer");

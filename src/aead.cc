@@ -1,7 +1,5 @@
 #include <string.h>
 #include "aead.h"
-#include "chacha20_simple.h"
-#include "poly1305-donna.h"
 
 using namespace v8;
 using namespace node;
