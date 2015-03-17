@@ -6,7 +6,7 @@
   "gypfile": true,
   "scripts": {
     "build": "node-gyp rebuild",
-    "test": "node test.js"
+    "test": "node test.js | tspec"
   },
   "dependencies": {
     "bindings": "^1.2.1",

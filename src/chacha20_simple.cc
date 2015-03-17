@@ -16,8 +16,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 This implementation is intended to be simple, many optimizations can be performed.
 */
 
-#include <string.h>
-#include <stdbool.h>
+
 #include "chacha20_simple.h"
 const char *constants = "expand 32-byte k";
 

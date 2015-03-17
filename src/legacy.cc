@@ -1,19 +1,19 @@
 #include <string.h>
-#include "aead.h"
+#include "legacy.h"
 
 using namespace v8;
 using namespace node;
-Persistent<Function> AEAD::constructor;
+Persistent<Function> Legacy::constructor;
 
-AEAD::AEAD() {};
-AEAD::~AEAD() {};
-void AEAD::Init(Handle<Object> exports) {
+Legacy::Legacy() {};
+Legacy::~Legacy() {};
+void Legacy::Init(Handle<Object> exports) {
   NanScope();
 
   // Prepare constructor template
   Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(New);
-  tpl->SetClassName(NanNew("AEAD"));
-  tpl->InstanceTemplate()->SetInternalFieldCount(5);
+  tpl->SetClassName(NanNew("Legacy"));
+  tpl->InstanceTemplate()->SetInternalFieldCount(4);
 
   // Prototype
   NODE_SET_PROTOTYPE_METHOD(tpl, "update", Update);
@@ -21,10 +21,10 @@ void AEAD::Init(Handle<Object> exports) {
   NODE_SET_PROTOTYPE_METHOD(tpl, "finish", Finish);
 
   NanAssignPersistent(constructor, tpl->GetFunction());
-  exports->Set(NanNew("AEAD"), tpl->GetFunction());
+  exports->Set(NanNew("Legacy"), tpl->GetFunction());
 }
 
-NAN_METHOD(AEAD::New) {
+NAN_METHOD(Legacy::New) {
   NanScope();
 
   if (args.IsConstructCall()) {
@@ -47,12 +47,10 @@ NAN_METHOD(AEAD::New) {
     chacha20_ctx ctx;
     chacha20_setup(&ctx, key, len, iv);
     unsigned long long clen = 0;
-    unsigned long long alen = 0;
-    AEAD* obj = new AEAD();
+    Legacy* obj = new Legacy();
     obj->ctx_ = ctx;
     obj->decrypt_ = decrypt;
     obj->clen_ = clen;
-    obj->alen_ = alen;
     poly1305_context poly;
 
     unsigned char* polykey = new unsigned char[64];
@@ -69,36 +67,34 @@ NAN_METHOD(AEAD::New) {
     NanReturnValue(cons->NewInstance(argc, argv));
   }
 }
-NAN_METHOD(AEAD::UpdateAad) {
+NAN_METHOD(Legacy::UpdateAad) {
   NanScope();
 
-  AEAD* obj = ObjectWrap::Unwrap<AEAD>(args.Holder());
+  Legacy* obj = ObjectWrap::Unwrap<Legacy>(args.Holder());
   if (args.Length() != 1 ||
         !Buffer::HasInstance(args[0]) ) {
       return NanThrowError("must supply buffer");
     }
     unsigned long long clen = obj->clen_;
-    unsigned long long alen = obj->alen_;
-    if (clen != 0 || alen != 0) {
+    if (clen != 0) {
       return NanThrowError("invalid state");
     }
     unsigned char* aad = reinterpret_cast<unsigned char*>(Buffer::Data(args[0]));
     size_t aadlen = Buffer::Length(args[0]);
     poly1305_update(&obj->poly_, aad, aadlen);
-    unsigned long long longaadlen = (unsigned long long) aadlen;
-    obj->alen_ += longaadlen;
-    if (aadlen % 16) {
-      size_t padding_len = 16 - (aadlen % 16);
-      unsigned char* padding = new unsigned char[15];
-      memset(padding, 0, 15);
-      poly1305_update(&obj->poly_, padding, padding_len);
+    unsigned char length_bytes[8];
+    unsigned i;
+    for (i = 0; i < 8; i++) {
+      length_bytes[i] = aadlen;
+      aadlen >>= 8;
     }
+    poly1305_update(&obj->poly_, length_bytes, 8);
     NanReturnValue(args.This());
 }
-NAN_METHOD(AEAD::Update) {
+NAN_METHOD(Legacy::Update) {
   NanScope();
 
-  AEAD* obj = ObjectWrap::Unwrap<AEAD>(args.Holder());
+  Legacy* obj = ObjectWrap::Unwrap<Legacy>(args.Holder());
   if (args.Length() != 1 ||
         !Buffer::HasInstance(args[0]) ) {
       return NanThrowError("must supply buffer");
@@ -122,27 +118,18 @@ NAN_METHOD(AEAD::Update) {
   NanReturnValue(NanNew(res));
 }
 
-NAN_METHOD(AEAD::Finish) {
+NAN_METHOD(Legacy::Finish) {
   NanScope();
 
-  AEAD* obj = ObjectWrap::Unwrap<AEAD>(args.Holder());
+  Legacy* obj = ObjectWrap::Unwrap<Legacy>(args.Holder());
   unsigned long long clen = obj->clen_;
-  unsigned long long alen = obj->alen_;
-  if (clen % 16) {
-    size_t padding_len = 16 - (clen % 16);
-    unsigned char* padding = new unsigned char[15];
-    memset(padding, 0, 15);
-    poly1305_update(&obj->poly_, padding, padding_len);
-  }
-  unsigned char length_bytes[16];
+  unsigned char length_bytes[8];
 	unsigned i;
   for (i = 0; i < 8; i++) {
-		length_bytes[i] = alen;
-    alen >>= 8;
-    length_bytes[i + 8] = clen;
+    length_bytes[i] = clen;
     clen >>= 8;
 	}
-  poly1305_update(&obj->poly_, length_bytes, 16);
+  poly1305_update(&obj->poly_, length_bytes, 8);
   unsigned char* mac = new unsigned char[16];
   poly1305_finish(&obj->poly_, mac);
   bool decrypt = obj -> decrypt_;

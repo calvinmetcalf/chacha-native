@@ -8,7 +8,8 @@
         "src/chacha.cc",
         "src/poly.cc",
         "src/poly1305-donna.cc",
-        "src/aead.cc"
+        "src/aead.cc",
+        "src/legacy.cc"
         ],
       "include_dirs": [
         "<!(node -e \"require('nan')\")"

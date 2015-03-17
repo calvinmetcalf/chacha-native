@@ -1,10 +1,11 @@
 chacha native
 ===
+[![Build Status](https://travis-ci.org/calvinmetcalf/chacha-native.svg)](https://travis-ci.org/calvinmetcalf/chacha-native)
 
 Node bindings for Chacha20/poly1305, api is identical to [my pure JavaScript library](https://github.com/calvinmetcalf/chacha20poly1305), Chacha20 is based
-on [this implementation](http://chacha20.insanecoding.org/) with Poly1305 based on [poly1305-donna](https://github.com/floodyberry/poly1305-donna) by way of [libressl](https://github.com/libressl-portable/openbsd/blob/6e5b37ae2618b181b18de9cb33262259e681fb85/src/lib/libssl/src/crypto/poly1305/poly1305.h). Currently only implements the
+on [this implementation](http://chacha20.insanecoding.org/) with Poly1305 based on [poly1305-donna](https://github.com/floodyberry/poly1305-donna) by way of [libressl](https://github.com/libressl-portable/openbsd/blob/6e5b37ae2618b181b18de9cb33262259e681fb85/src/lib/libssl/src/crypto/poly1305/poly1305.h). By default it implements the
 [IETF](https://tools.ietf.org/html/draft-irtf-cfrg-chacha20-poly1305-10) version
-of the chacha20 poly1305 aead, the legecy version will likely be implemented soon.
+of the chacha20 poly1305 aead, but the legacy method does the version compatibale with borringssl and others.
 
 API
 ===
@@ -50,3 +51,14 @@ var hmac =  chacha.createHmac(key);
 ```
 
 API is identical to an hmac in node, so it's a stream with update and digest methods.
+
+# Legacy Aead
+
+A variant version of the aead that is compatible with boringssl.
+
+```js
+var cipher =  new chacha.AeadLegacy(key, nonce);
+var decipher =  new chacha.AeadLegacy(key, nonce, true);
+```
+
+The third parameter is whether it should decipher, otherwise identical to createCipher/createDecipher. Doesn't implement variable length tags.

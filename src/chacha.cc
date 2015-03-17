@@ -1,5 +1,4 @@
 #include "chacha.h"
-#include "chacha20_simple.h"
 
 using namespace v8;
 using namespace node;

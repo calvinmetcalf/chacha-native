@@ -17,7 +17,8 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #ifndef CHACHA20_SIMPLE_H
 #define CHACHA20_SIMPLE_H
 #include <stdint.h>
-
+#include <string.h>
+#include <stdbool.h>
 #define ROTL32(v, n) ((v) << (n)) | ((v) >> (32 - (n)))
 
 #define LE(p) (((uint32_t)((p)[0])) | ((uint32_t)((p)[1]) << 8) | ((uint32_t)((p)[2]) << 16) | ((uint32_t)((p)[3]) << 24))
