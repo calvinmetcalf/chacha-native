@@ -30,21 +30,21 @@ const char *constants = "expand 32-byte k";
     x[a] += x[b]; x[d] = ROTL32(x[d] ^ x[a], 8); \
     x[c] += x[d]; x[b] = ROTL32(x[b] ^ x[c], 7);
 
-#define ROUND(x) \
-    x.a = x.a + x.b;\
-    x.d = ROTL32(x.d ^ x.a , 16); \
-    x.c = x.c + x.d;\
-    x.b = ROTL32(x.b ^ x.c, 12); \
-    x.a = x.a + x.b;\
-    x.d = ROTL32(x.d ^ x.a , 8); \
-    x.c = x.c + x.d;\
-    x.b = ROTL32(x.b ^ x.c, 7);
+#define ROUND(a, b, c, d) \
+    a = a + b;\
+    d = ROTL32(d ^ a , 16); \
+    c = c + d;\
+    b = ROTL32(b ^ c, 12); \
+    a = a + b;\
+    d = ROTL32(d ^ a , 8); \
+    c = c + d;\
+    b = ROTL32(b ^ c, 7);
 
-#define TOARRAY(ctx, x) \
-    x[0] = ctx.a[0];x[1] = ctx.a[1];x[2] = ctx.a[2];x[3] = ctx.a[3];\
-    x[4] = ctx.b[0];x[5] = ctx.b[1];x[6] = ctx.b[2];x[7] = ctx.b[3];\
-    x[8] = ctx.c[0];x[9] = ctx.c[1];x[10] = ctx.c[2];x[11] = ctx.c[3];\
-    x[12] = ctx.d[0];x[13] = ctx.d[1];x[14] = ctx.d[2];x[15] = ctx.d[3];
+#define TOARRAY(a, b, c, d, x) \
+    x[0] = a[0];x[1] = a[1];x[2] = a[2];x[3] = a[3];\
+    x[4] = b[0];x[5] = b[1];x[6] = b[2];x[7] = b[3];\
+    x[8] = c[0];x[9] = c[1];x[10] = c[2];x[11] = c[3];\
+    x[12] = d[0];x[13] = d[1];x[14] = d[2];x[15] = d[3];
 
 void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const uint8_t *nonce)
 {
@@ -74,29 +74,26 @@ bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
   uint32_t *const nonce = ctx->schedule+12; //12 is where the 128 bit counter is
   int i = 10;
 
-  memcpy(output, ctx->schedule, sizeof(ctx->schedule));
-  simd_ctx simd;
+  uint32x4 a = uint32x4::load((uint32x4*)(ctx->schedule + 0));
+  uint32x4 b = uint32x4::load((uint32x4*)(ctx->schedule + 4));
+  uint32x4 c = uint32x4::load((uint32x4*)(ctx->schedule + 8));
+  uint32x4 d = uint32x4::load((uint32x4*)(ctx->schedule + 12));
 
-  svec<4,uint32_t> a(output[0], output[1], output[2], output[3]);
-  svec<4,uint32_t> b(output[4], output[5], output[6], output[7]);
-  svec<4,uint32_t> c(output[8], output[9], output[10], output[11]);
-  svec<4,uint32_t> d(output[12], output[13], output[14], output[15]);
-  simd.a = a;
-  simd.b = b;
-  simd.c = c;
-  simd.d = d;
   while (i--)
   {
-    ROUND(simd);
-    simd.b = svec_rotate(simd.b, 1);
-    simd.c = svec_rotate(simd.c, 2);
-    simd.d = svec_rotate(simd.d, 3);
-    ROUND(simd);
-    simd.b = svec_rotate(simd.b, 3);
-    simd.c = svec_rotate(simd.c, 2);
-    simd.d = svec_rotate(simd.d, 1);
+    ROUND(a, b, c, d);
+    b = svec_rotate(b, 1);
+    c = svec_rotate(c, 2);
+    d = svec_rotate(d, 3);
+    ROUND(a, b, c, d);
+    b = svec_rotate(b, 3);
+    c = svec_rotate(c, 2);
+    d = svec_rotate(d, 1);
   }
-  TOARRAY(simd, output);
+  a.store((uint32x4*)(output + 0));
+  b.store((uint32x4*)(output + 4));
+  c.store((uint32x4*)(output + 8));
+  d.store((uint32x4*)(output + 12));
   for (i = 0; i < 16; ++i)
   {
     uint32_t result = output[i] + ctx->schedule[i];
