@@ -48,36 +48,23 @@ const char *constants = "expand 32-byte k";
 
 void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const uint8_t *nonce)
 {
-  ctx->schedule[0] = LE(constants + 0);
-  ctx->schedule[1] = LE(constants + 4);
-  ctx->schedule[2] = LE(constants + 8);
-  ctx->schedule[3] = LE(constants + 12);
-  ctx->schedule[4] = LE(key + 0);
-  ctx->schedule[5] = LE(key + 4);
-  ctx->schedule[6] = LE(key + 8);
-  ctx->schedule[7] = LE(key + 12);
-  ctx->schedule[8] = LE(key + 16 % length);
-  ctx->schedule[9] = LE(key + 20 % length);
-  ctx->schedule[10] = LE(key + 24 % length);
-  ctx->schedule[11] = LE(key + 28 % length);
-  //Surprise! This is really a block cipher in CTR mode
-  ctx->schedule[12] = 0; //Counter
-  ctx->schedule[13] = LE(nonce+0);
-  ctx->schedule[14] = LE(nonce+4);
-  ctx->schedule[15] = LE(nonce+8);
+  ctx-> a = uint32x4(LE(constants+0), LE(constants+4), LE(constants+8), LE(constants+12));
+  ctx-> b =  uint32x4(LE(key+0), LE(key+4), LE(key+8), LE(key+12));
+  ctx-> d =  uint32x4(LE(key+16), LE(key+20), LE(key+24), LE(key));
+  ctx-> d = uint32x4(0, LE(nonce+0), LE(nonce+4), LE(nonce+12));
 
   ctx->available = 0;
 }
 
 bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
 {
-  uint32_t *const nonce = ctx->schedule+12; //12 is where the 128 bit counter is
+  uint32_t *const nonce = &ctx->d[0]; //12 is where the 128 bit counter is
   int i = 10;
 
-  uint32x4 a = uint32x4::load((uint32x4*)(ctx->schedule + 0));
-  uint32x4 b = uint32x4::load((uint32x4*)(ctx->schedule + 4));
-  uint32x4 c = uint32x4::load((uint32x4*)(ctx->schedule + 8));
-  uint32x4 d = uint32x4::load((uint32x4*)(ctx->schedule + 12));
+  uint32x4 a = uint32x4::load(&ctx->a);
+  uint32x4 b = uint32x4::load(&ctx->b);
+  uint32x4 c = uint32x4::load(&ctx->c);
+  uint32x4 d = uint32x4::load(&ctx->d);
 
   while (i--)
   {
@@ -90,15 +77,30 @@ bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
     c = svec_rotate(c, 2);
     d = svec_rotate(d, 1);
   }
-  a.store((uint32x4*)(output + 0));
-  b.store((uint32x4*)(output + 4));
-  c.store((uint32x4*)(output + 8));
-  d.store((uint32x4*)(output + 12));
-  for (i = 0; i < 16; ++i)
-  {
-    uint32_t result = output[i] + ctx->schedule[i];
-    FROMLE((uint8_t *)(output+i), result);
-  }
+  a = a + ctx->a;
+  b = b + ctx->b;
+  c = c + ctx->c;
+  d = d + ctx->d;
+  int j = 0;
+  FROMLE((uint8_t *)(output+(j++)), a[0]);
+  FROMLE((uint8_t *)(output+(j++)), a[1]);
+  FROMLE((uint8_t *)(output+(j++)), a[2]);
+  FROMLE((uint8_t *)(output+(j++)), a[3]);
+
+  FROMLE((uint8_t *)(output+(j++)), b[0]);
+  FROMLE((uint8_t *)(output+(j++)), b[1]);
+  FROMLE((uint8_t *)(output+(j++)), b[2]);
+  FROMLE((uint8_t *)(output+(j++)), b[3]);
+
+  FROMLE((uint8_t *)(output+(j++)), c[0]);
+  FROMLE((uint8_t *)(output+(j++)), c[1]);
+  FROMLE((uint8_t *)(output+(j++)), c[2]);
+  FROMLE((uint8_t *)(output+(j++)), c[3]);
+
+  FROMLE((uint8_t *)(output+(j++)), d[0]);
+  FROMLE((uint8_t *)(output+(j++)), d[1]);
+  FROMLE((uint8_t *)(output+(j++)), d[2]);
+  FROMLE((uint8_t *)(output+(j++)), d[3]);
 
   // limit it to single counter
   if (!++nonce[0])
