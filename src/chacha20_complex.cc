@@ -90,13 +90,21 @@ bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
     c = svec_rotate(c, 2);
     d = svec_rotate(d, 1);
   }
+  uint32x4 sa = uint32x4::load((uint32x4*)(ctx->schedule + 0));
+  uint32x4 sb = uint32x4::load((uint32x4*)(ctx->schedule + 4));
+  uint32x4 sc = uint32x4::load((uint32x4*)(ctx->schedule + 8));
+  uint32x4 sd = uint32x4::load((uint32x4*)(ctx->schedule + 12));
+  a = a + sa;
+  b = b + sb;
+  c = c + sc;
+  d = d + sd;
   a.store((uint32x4*)(output + 0));
   b.store((uint32x4*)(output + 4));
   c.store((uint32x4*)(output + 8));
   d.store((uint32x4*)(output + 12));
   for (i = 0; i < 16; ++i)
   {
-    uint32_t result = output[i] + ctx->schedule[i];
+    uint32_t result = output[i];
     FROMLE((uint8_t *)(output+i), result);
   }
 
