@@ -19,7 +19,7 @@ This implementation is intended to be simple, many optimizations can be performe
 #include "chacha20_complex.h"
 const char *constants = "expand 32-byte k";
 
-#define ROTL32(v, n) ((v) << (n)) | ((v) >> (32 - (n)))
+
 
 #define LE(p) (((uint32_t)((p)[0])) | ((uint32_t)((p)[1]) << 8) | ((uint32_t)((p)[2]) << 16) | ((uint32_t)((p)[3]) << 24))
 #define FROMLE(b, i) (b)[0] = i & 0xFF; (b)[1] = (i >> 8) & 0xFF; (b)[2] = (i >> 16) & 0xFF; (b)[3] = (i >> 24) & 0xFF;
@@ -30,7 +30,8 @@ const char *constants = "expand 32-byte k";
     x[a] += x[b]; x[d] = ROTL32(x[d] ^ x[a], 8); \
     x[c] += x[d]; x[b] = ROTL32(x[b] ^ x[c], 7);
 
-#define ROUND(a, b, c, d) \
+#define ROTL32(v, n) ((v) << (n)) | ((v) >> (32 - (n)))
+#define ROUND(a, b, c, d) {\
     a = a + b;\
     d = ROTL32(d ^ a , 16); \
     c = c + d;\
@@ -38,7 +39,8 @@ const char *constants = "expand 32-byte k";
     a = a + b;\
     d = ROTL32(d ^ a , 8); \
     c = c + d;\
-    b = ROTL32(b ^ c, 7);
+    b = ROTL32(b ^ c, 7);\
+  }
 
 #define TOARRAY(a, b, c, d, x) \
     x[0] = a[0];x[1] = a[1];x[2] = a[2];x[3] = a[3];\
@@ -48,36 +50,42 @@ const char *constants = "expand 32-byte k";
 
 void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const uint8_t *nonce)
 {
-  ctx->schedule[0] = LE(constants + 0);
-  ctx->schedule[1] = LE(constants + 4);
-  ctx->schedule[2] = LE(constants + 8);
-  ctx->schedule[3] = LE(constants + 12);
-  ctx->schedule[4] = LE(key + 0);
-  ctx->schedule[5] = LE(key + 4);
-  ctx->schedule[6] = LE(key + 8);
-  ctx->schedule[7] = LE(key + 12);
-  ctx->schedule[8] = LE(key + 16 % length);
-  ctx->schedule[9] = LE(key + 20 % length);
-  ctx->schedule[10] = LE(key + 24 % length);
-  ctx->schedule[11] = LE(key + 28 % length);
-  //Surprise! This is really a block cipher in CTR mode
-  ctx->schedule[12] = 0; //Counter
-  ctx->schedule[13] = LE(nonce+0);
-  ctx->schedule[14] = LE(nonce+4);
-  ctx->schedule[15] = LE(nonce+8);
+  ctx->a = uint32x4(
+    LE(constants + 0),
+    LE(constants + 4),
+    LE(constants + 8),
+    LE(constants + 12)
+  );
+  ctx->b = uint32x4(
+    LE(key + 0),
+    LE(key + 4),
+    LE(key + 8),
+    LE(key + 12)
+  );
+  ctx->c = uint32x4(
+    LE(key + 16 % length),
+    LE(key + 20 % length),
+    LE(key + 24 % length),
+    LE(key + 28 % length)
+  );
+  ctx->d = uint32x4(
+    0,
+    LE(nonce + 0),
+    LE(nonce + 4),
+    LE(nonce + 8)
+  );
 
   ctx->available = 0;
 }
 
 bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
 {
-  uint32_t *const nonce = ctx->schedule+12; //12 is where the 128 bit counter is
   int i = 10;
 
-  uint32x4 a = uint32x4::load((uint32x4*)(ctx->schedule + 0));
-  uint32x4 b = uint32x4::load((uint32x4*)(ctx->schedule + 4));
-  uint32x4 c = uint32x4::load((uint32x4*)(ctx->schedule + 8));
-  uint32x4 d = uint32x4::load((uint32x4*)(ctx->schedule + 12));
+  uint32x4 a = ctx->a;
+  uint32x4 b = ctx->b;
+  uint32x4 c = ctx->c;
+  uint32x4 d = ctx->d;
 
   while (i--)
   {
@@ -90,14 +98,10 @@ bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
     c = svec_rotate(c, 2);
     d = svec_rotate(d, 1);
   }
-  uint32x4 sa = uint32x4::load((uint32x4*)(ctx->schedule + 0));
-  uint32x4 sb = uint32x4::load((uint32x4*)(ctx->schedule + 4));
-  uint32x4 sc = uint32x4::load((uint32x4*)(ctx->schedule + 8));
-  uint32x4 sd = uint32x4::load((uint32x4*)(ctx->schedule + 12));
-  a = a + sa;
-  b = b + sb;
-  c = c + sc;
-  d = d + sd;
+  a = a + ctx->a;
+  b = b + ctx->b;
+  c = c + ctx->c;
+  d = d + ctx->d;
   a.store((uint32x4*)(output + 0));
   b.store((uint32x4*)(output + 4));
   c.store((uint32x4*)(output + 8));
@@ -109,7 +113,7 @@ bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
   }
 
   // limit it to single counter
-  if (!++nonce[0])
+  if (!++ctx->d[0])
     return false;
 
   return true;

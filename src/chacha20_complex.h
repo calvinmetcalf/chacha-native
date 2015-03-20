@@ -31,7 +31,10 @@ extern "C"
 typedef svec<4,uint32_t> uint32x4;
 typedef struct
 {
-  uint32_t schedule[16];
+  uint32x4 a;
+  uint32x4 b;
+  uint32x4 c;
+  uint32x4 d;
   uint32_t keystream[16];
   size_t available;
 } chacha20_ctx;
