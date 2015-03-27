@@ -19,58 +19,80 @@ This implementation is intended to be simple, many optimizations can be performe
 
 #include "chacha20_simple.h"
 const char *constants = "expand 32-byte k";
-
 void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const uint8_t *nonce)
 {
-  ctx->schedule[0] = LE(constants + 0);
-  ctx->schedule[1] = LE(constants + 4);
-  ctx->schedule[2] = LE(constants + 8);
-  ctx->schedule[3] = LE(constants + 12);
-  ctx->schedule[4] = LE(key + 0);
-  ctx->schedule[5] = LE(key + 4);
-  ctx->schedule[6] = LE(key + 8);
-  ctx->schedule[7] = LE(key + 12);
-  ctx->schedule[8] = LE(key + 16 % length);
-  ctx->schedule[9] = LE(key + 20 % length);
-  ctx->schedule[10] = LE(key + 24 % length);
-  ctx->schedule[11] = LE(key + 28 % length);
+  ctx->a[0] = LE(constants + 0);
+  ctx->a[1] = LE(constants + 4);
+  ctx->a[2] = LE(constants + 8);
+  ctx->a[3] = LE(constants + 12);
+
+  ctx->b[0] = LE(key + 0);
+  ctx->b[1] = LE(key + 4);
+  ctx->b[2] = LE(key + 8);
+  ctx->b[3] = LE(key + 12);
+
+  ctx->c[0] = LE(key + 16 % length);
+  ctx->c[1] = LE(key + 20 % length);
+  ctx->c[2] = LE(key + 24 % length);
+  ctx->c[3] = LE(key + 28 % length);
+
   //Surprise! This is really a block cipher in CTR mode
-  ctx->schedule[12] = 0; //Counter
-  ctx->schedule[13] = LE(nonce+0);
-  ctx->schedule[14] = LE(nonce+4);
-  ctx->schedule[15] = LE(nonce+8);
+  ctx->d[0] = 0; //Counter
+  ctx->d[1] = LE(nonce+0);
+  ctx->d[2] = LE(nonce+4);
+  ctx->d[3] = LE(nonce+8);
 
   ctx->available = 0;
 }
 
-#define QUARTERROUND(x, a, b, c, d) \
-    x[a] += x[b]; x[d] = ROTL32(x[d] ^ x[a], 16); \
-    x[c] += x[d]; x[b] = ROTL32(x[b] ^ x[c], 12); \
-    x[a] += x[b]; x[d] = ROTL32(x[d] ^ x[a], 8); \
-    x[c] += x[d]; x[b] = ROTL32(x[b] ^ x[c], 7);
+#define QUARTERROUND(a, b, c, d) \
+    a += b; d = ROTL32(d ^ a, 16); \
+    c += d; b = ROTL32(b ^ c, 12); \
+    a += b; d = ROTL32(d ^ a, 8); \
+    c += d; b = ROTL32(b ^ c, 7);
 
-bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
+static inline bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
 {
-  uint32_t *const nonce = ctx->schedule+12; //12 is where the 128 bit counter is
   int i = 10;
-
-  memcpy(output, ctx->schedule, sizeof(ctx->schedule));
-
+  int j;
+  uint32_t *a = output;
+  uint32_t *b = output + 4;
+  uint32_t *c = output + 8;
+  uint32_t *d = output + 12;
+  memcpy(a, ctx->a, sizeof(ctx->a));
+  memcpy(b, ctx->b, sizeof(ctx->b));
+  memcpy(c, ctx->c, sizeof(ctx->c));
+  memcpy(d, ctx->d, sizeof(ctx->d));
   while (i--)
   {
-    QUARTERROUND(output, 0, 4, 8, 12)
-    QUARTERROUND(output, 1, 5, 9, 13)
-    QUARTERROUND(output, 2, 6, 10, 14)
-    QUARTERROUND(output, 3, 7, 11, 15)
-    QUARTERROUND(output, 0, 5, 10, 15)
-    QUARTERROUND(output, 1, 6, 11, 12)
-    QUARTERROUND(output, 2, 7, 8, 13)
-    QUARTERROUND(output, 3, 4, 9, 14)
+    for (j = 0; j < 4; ++j)
+    {
+      QUARTERROUND(a[j], b[j], c[j], d[j])
+    }
+    for (j = 0; j < 4; ++j)
+    {
+      QUARTERROUND(a[j], b[(j + 1) % 4], c[(j + 2) % 4], d[(j + 3) % 4])
+    }
   }
-  for (i = 0; i < 16; ++i)
+  for (i = 0; i < 4; ++i)
   {
-    uint32_t result = output[i] + ctx->schedule[i];
-    FROMLE((uint8_t *)(output+i), result);
+    uint32_t result = a[i] + ctx->a[i];
+    FROMLE((uint8_t *)(a+i), result);
+  }
+  for (i = 0; i < 4; ++i)
+  {
+    uint32_t result = b[i] + ctx->b[i];
+    FROMLE((uint8_t *)(b+i), result);
+  }
+  for (i = 0; i < 4; ++i)
+  {
+    uint32_t result = c[i] + ctx->c[i];
+    FROMLE((uint8_t *)(c+i), result);
+  }
+  for (i = 0; i < 4; ++i)
+  {
+    uint32_t result = d[i] + ctx->d[i];
+    FROMLE((uint8_t *)(d+i), result);
   }
 
   /*
@@ -79,7 +101,7 @@ bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
   This implementation will remain compatible with the official up to 2^64 blocks, and past that point, the official is not intended to be used.
   This implementation with this change also allows this algorithm to become compatible for a Fortuna-like construct.
   */
-  if (!++nonce[0]) { return false; }
+  if (!++ ctx->d[0]) { return false; }
   return true;
 }
 

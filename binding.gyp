@@ -13,7 +13,11 @@
         ],
       "include_dirs": [
         "<!(node -e \"require('nan')\")"
-      ]
+      ],
+       'cflags': ['-g', '-Ofast'],
+        'xcode_settings': {
+          'OTHER_CFLAGS': ['-g', '-Ofast']
+        }
     }
   ]
 }

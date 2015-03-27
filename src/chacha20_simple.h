@@ -35,7 +35,10 @@ extern "C"
 
 typedef struct
 {
-  uint32_t schedule[16];
+  uint32_t a[4];
+  uint32_t b[4];
+  uint32_t c[4];
+  uint32_t d[4];
   uint32_t keystream[16];
   size_t available;
 } chacha20_ctx;
@@ -44,7 +47,7 @@ typedef struct
 void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const uint8_t *nonce);
 
 //Raw keystream for the current block, convert output to uint8_t[] for individual bytes. Counter is incremented upon use
-bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16]);
+// bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16]);
 
 //Encrypt an arbitrary amount of plaintext, call continuously as needed
 bool chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length);
