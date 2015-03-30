@@ -18,29 +18,32 @@ This implementation is intended to be simple, many optimizations can be performe
 
 
 #include "chacha20_simple.h"
-const char *constants = "expand 32-byte k";
+
+#define constants "expand 32-byte k"
+
 void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const uint8_t *nonce)
 {
-  ctx->a[0] = LE(constants + 0);
+
+  ctx->a[0] = LE(constants);
   ctx->a[1] = LE(constants + 4);
   ctx->a[2] = LE(constants + 8);
   ctx->a[3] = LE(constants + 12);
 
-  ctx->b[0] = LE(key + 0);
+  ctx->b[0] = LE(key);
   ctx->b[1] = LE(key + 4);
   ctx->b[2] = LE(key + 8);
   ctx->b[3] = LE(key + 12);
 
-  ctx->c[0] = LE(key + 16 % length);
-  ctx->c[1] = LE(key + 20 % length);
-  ctx->c[2] = LE(key + 24 % length);
-  ctx->c[3] = LE(key + 28 % length);
+  ctx->c[0] = LE(key + 16);
+  ctx->c[1] = LE(key + 20);
+  ctx->c[2] = LE(key + 24);
+  ctx->c[3] = LE(key + 28);
 
   //Surprise! This is really a block cipher in CTR mode
-  ctx->d[0] = 0; //Counter
-  ctx->d[1] = LE(nonce+0);
-  ctx->d[2] = LE(nonce+4);
-  ctx->d[3] = LE(nonce+8);
+  ctx->d0 = 0; //Counter
+  ctx->d1 = LE(nonce+0);
+  ctx->d2 = LE(nonce+4);
+  ctx->d3 = LE(nonce+8);
 
   ctx->available = 0;
 }
@@ -50,8 +53,20 @@ void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const 
     c += d; b = ROTL32(b ^ c, 12); \
     a += b; d = ROTL32(d ^ a, 8); \
     c += d; b = ROTL32(b ^ c, 7);
+#define TWOX(a) \
+    do{a}while(0);\
+    do{a}while(0);
 
-static inline bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
+#define FIVEX(a) \
+    a\
+    a\
+    a\
+    a\
+    a;
+
+#define TENX(a) FIVEX(TWOX(a));
+
+static inline void chacha20_block(chacha20_ctx *ctx, uint32_t output[16], uint32_t counter)
 {
   int i = 10;
   int j;
@@ -62,9 +77,11 @@ static inline bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
   memcpy(a, ctx->a, sizeof(ctx->a));
   memcpy(b, ctx->b, sizeof(ctx->b));
   memcpy(c, ctx->c, sizeof(ctx->c));
-  memcpy(d, ctx->d, sizeof(ctx->d));
-  while (i--)
-  {
+  d[0] = counter;
+  d[1] = ctx->d1;
+  d[2] = ctx->d2;
+  d[3] = ctx->d3;
+  TENX(
     for (j = 0; j < 4; ++j)
     {
       QUARTERROUND(a[j], b[j], c[j], d[j])
@@ -73,7 +90,7 @@ static inline bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
     {
       QUARTERROUND(a[j], b[(j + 1) % 4], c[(j + 2) % 4], d[(j + 3) % 4])
     }
-  }
+  )
   for (i = 0; i < 4; ++i)
   {
     uint32_t result = a[i] + ctx->a[i];
@@ -89,26 +106,25 @@ static inline bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
     uint32_t result = c[i] + ctx->c[i];
     FROMLE((uint8_t *)(c+i), result);
   }
-  for (i = 0; i < 4; ++i)
-  {
-    uint32_t result = d[i] + ctx->d[i];
-    FROMLE((uint8_t *)(d+i), result);
-  }
+  uint32_t result = d[0] + counter;
+  FROMLE((uint8_t *)(d), result);
 
-  /*
-  Official specs calls for performing a 64 bit increment here, and limit usage to 2^64 blocks.
-  However, recommendations for CTR mode in various papers recommend including the nonce component for a 128 bit increment.
-  This implementation will remain compatible with the official up to 2^64 blocks, and past that point, the official is not intended to be used.
-  This implementation with this change also allows this algorithm to become compatible for a Fortuna-like construct.
-  */
-  if (!++ ctx->d[0]) { return false; }
-  return true;
+  result = d[1] + ctx->d1;
+  FROMLE((uint8_t *)(d+1), result);
+
+  result = d[2] + ctx->d2;
+  FROMLE((uint8_t *)(d+2), result);
+
+  result = d[3] + ctx->d3;
+  FROMLE((uint8_t *)(d+3), result);
 }
 
 static inline void chacha20_xor(uint8_t *keystream, const uint8_t **in, uint8_t **out, size_t length)
 {
   uint8_t *end_keystream = keystream + length;
-  do { *(*out)++ = *(*in)++ ^ *keystream++; } while (keystream < end_keystream);
+  do { 
+    *(*out)++ = *(*in)++ ^ *keystream++;
+  } while (keystream < end_keystream);
 }
 
 bool chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length)
@@ -127,16 +143,19 @@ bool chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t
     }
 
     //Then, handle new blocks
+    uint32_t counter = ctx->d0;
     while (length)
     {
       size_t amount = MIN(length, sizeof(ctx->keystream));
-      if (!chacha20_block(ctx, ctx->keystream)){
+      chacha20_block(ctx, ctx->keystream, counter);
+      if (!++counter) {
         return false;
       }
       chacha20_xor(k, &in, &out, amount);
       length -= amount;
       ctx->available = sizeof(ctx->keystream) - amount;
     }
+    ctx->d0 = counter;
   }
   return true;
 }

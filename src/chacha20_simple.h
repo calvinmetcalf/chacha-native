@@ -38,7 +38,10 @@ typedef struct
   uint32_t a[4];
   uint32_t b[4];
   uint32_t c[4];
-  uint32_t d[4];
+  uint32_t d0;
+  uint32_t d1;
+  uint32_t d2;
+  uint32_t d3;
   uint32_t keystream[16];
   size_t available;
 } chacha20_ctx;
