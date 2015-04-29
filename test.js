@@ -24,6 +24,22 @@ function testIt(t) {
   t.equals(c.update(data).toString('hex'), js4);
   t.equals(c2.update(data).toString('hex'), js4);
 }
+function testItNoBody(t) {
+  t.plan(2);
+  var key = crypto.randomBytes(32);
+  var iv = crypto.randomBytes(8);
+  var c = new Legacy(key, iv);
+  c.final();
+  var c2 = new AEAD(key, Buffer.concat([new Buffer([0,0,0,0]), iv]));
+  c2.final();
+  var js = new Legacyjs(key, iv);
+  js.final();
+  var tc1 = c.getAuthTag();
+  var tc2 = c2.getAuthTag();
+  var tj = js.getAuthTag();
+  t.equals(tc1.toString('hex'), tj.toString('hex'));
+  t.equals(tc2.toString('hex'), tj.toString('hex'));
+}
 function testPoly(t) {
   t.plan(1);
   var key = crypto.randomBytes(32);
@@ -90,3 +106,4 @@ while (i++ < 50) {
   test('aead round ' + i, testAEAD (AEAD, AEADjs, 12));
   test('legacy round ' + i, testAEAD (Legacy, Legacyjs, 8));
 }
+test('no body', testItNoBody);
