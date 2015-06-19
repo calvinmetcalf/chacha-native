@@ -1,6 +1,6 @@
 {
   "name": "chacha-native",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "native chacha20/poly1305 bindings in nodejs",
   "main": "lib",
   "gypfile": true,
