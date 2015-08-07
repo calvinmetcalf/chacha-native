@@ -1,37 +1,35 @@
 #include <string.h>
 #include "aead.h"
 
-using namespace v8;
 using namespace node;
-Persistent<Function> AEAD::constructor;
+Nan::Persistent<v8::Function> AEAD::constructor;
 
 AEAD::AEAD() {};
 AEAD::~AEAD() {};
-void AEAD::Init(Handle<Object> exports) {
-  NanScope();
+void AEAD::Init(v8::Local<v8::Object> exports) {
+  Nan::HandleScope scope;
 
   // Prepare constructor template
-  Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(New);
-  tpl->SetClassName(NanNew("AEAD"));
+  v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
+  tpl->SetClassName(Nan::New("AEAD").ToLocalChecked());
   tpl->InstanceTemplate()->SetInternalFieldCount(5);
 
   // Prototype
-  NODE_SET_PROTOTYPE_METHOD(tpl, "update", Update);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "setAAD", UpdateAad);
-  NODE_SET_PROTOTYPE_METHOD(tpl, "finish", Finish);
+  Nan::SetPrototypeMethod(tpl, "update", Update);
+  Nan::SetPrototypeMethod(tpl, "setAAD", UpdateAad);
+  Nan::SetPrototypeMethod(tpl, "finish", Finish);
 
-  NanAssignPersistent(constructor, tpl->GetFunction());
-  exports->Set(NanNew("AEAD"), tpl->GetFunction());
+  constructor.Reset(tpl->GetFunction());
+  exports->Set(Nan::New("AEAD").ToLocalChecked(), tpl->GetFunction());
 }
 
-NAN_METHOD(AEAD::New) {
-  NanScope();
+void AEAD::New(const Nan::FunctionCallbackInfo<v8::Value>& args) {
 
   if (args.IsConstructCall()) {
     if (args.Length() < 3 ||
         !Buffer::HasInstance(args[0]) ||
         !Buffer::HasInstance(args[1])) {
-      return NanThrowError("must supply key and iv");
+      return Nan::ThrowError("must supply key and iv");
     }
     unsigned char* key = reinterpret_cast<unsigned char*>(Buffer::Data(args[0]));
     unsigned char* iv = reinterpret_cast<unsigned char*>(Buffer::Data(args[1]));
@@ -39,10 +37,10 @@ NAN_METHOD(AEAD::New) {
     size_t len = Buffer::Length(args[0]);
     size_t ivlen = Buffer::Length(args[1]);
     if (len != 32) {
-      return NanThrowError("invalid key length");
+      return Nan::ThrowError("invalid key length");
     }
     if (ivlen != 12) {
-      return NanThrowError("invalid nonce length");
+      return Nan::ThrowError("invalid nonce length");
     }
     chacha20_ctx ctx;
     chacha20_setup(&ctx, key, len, iv);
@@ -61,26 +59,25 @@ NAN_METHOD(AEAD::New) {
     obj->poly_ = poly;
     poly1305_init(&obj->poly_, polykey);
     obj->Wrap(args.This());
-    NanReturnValue(args.This());
+    args.GetReturnValue().Set(args.This());
   } else {
     const int argc = 3;
-    Local<Value> argv[argc] = { args[0], args[1], args[2]};
-    Local<Function> cons = NanNew<Function>(constructor);
-    NanReturnValue(cons->NewInstance(argc, argv));
+    v8::Local<v8::Value> argv[argc] = { args[0], args[1], args[2]};
+    v8::Local<v8::Function> cons = Nan::New<v8::Function>(constructor);
+    args.GetReturnValue().Set(cons->NewInstance(argc, argv));
   }
 }
-NAN_METHOD(AEAD::UpdateAad) {
-  NanScope();
+void AEAD::UpdateAad(const Nan::FunctionCallbackInfo<v8::Value>& args) {
 
   AEAD* obj = ObjectWrap::Unwrap<AEAD>(args.Holder());
   if (args.Length() != 1 ||
         !Buffer::HasInstance(args[0]) ) {
-      return NanThrowError("must supply buffer");
+      return Nan::ThrowError("must supply buffer");
     }
     unsigned long long clen = obj->clen_;
     unsigned long long alen = obj->alen_;
     if (clen != 0 || alen != 0) {
-      return NanThrowError("invalid state");
+      return Nan::ThrowError("invalid state");
     }
     unsigned char* aad = reinterpret_cast<unsigned char*>(Buffer::Data(args[0]));
     size_t aadlen = Buffer::Length(args[0]);
@@ -93,22 +90,21 @@ NAN_METHOD(AEAD::UpdateAad) {
       memset(padding, 0, 15);
       poly1305_update(&obj->poly_, padding, padding_len);
     }
-    NanReturnValue(args.This());
+    args.GetReturnValue().Set(args.This());
 }
-NAN_METHOD(AEAD::Update) {
-  NanScope();
 
+void AEAD::Update(const Nan::FunctionCallbackInfo<v8::Value>& args) {
   AEAD* obj = ObjectWrap::Unwrap<AEAD>(args.Holder());
   if (args.Length() != 1 ||
         !Buffer::HasInstance(args[0]) ) {
-      return NanThrowError("must supply buffer");
+      return Nan::ThrowError("must supply buffer");
     }
   unsigned char* input = reinterpret_cast<unsigned char*>(Buffer::Data(args[0]));
   size_t len = Buffer::Length(args[0]);
 
   unsigned char* out = new unsigned char[len];
   if (!chacha20_encrypt(&obj->ctx_, input, out, len)) {
-    return NanThrowError("counter exausted");
+    return Nan::ThrowError("counter exausted");
   };
 
   if (obj->decrypt_) {
@@ -118,13 +114,11 @@ NAN_METHOD(AEAD::Update) {
   }
   unsigned long long longlen = (unsigned long long) len;
   obj->clen_ += longlen;
-  Local<Value> res = NanNewBufferHandle(reinterpret_cast<char*>(out), len);
-  NanReturnValue(NanNew(res));
+  v8::Local<v8::Value> res = Nan::NewBuffer(reinterpret_cast<char*>(out), len).ToLocalChecked();
+  args.GetReturnValue().Set(res);
 }
 
-NAN_METHOD(AEAD::Finish) {
-  NanScope();
-
+void AEAD::Finish(const Nan::FunctionCallbackInfo<v8::Value>& args) {
   AEAD* obj = ObjectWrap::Unwrap<AEAD>(args.Holder());
   unsigned long long clen = obj->clen_;
   unsigned long long alen = obj->alen_;
@@ -149,16 +143,16 @@ NAN_METHOD(AEAD::Finish) {
   if (decrypt) {
     if (args.Length() != 1 ||
         !Buffer::HasInstance(args[0])) {
-          return NanThrowError("must supply tag");
+          return Nan::ThrowError("must supply tag");
         }
     unsigned char* tag = reinterpret_cast<unsigned char*>(Buffer::Data(args[0]));
     if (poly1305_verify(tag, mac) == 1) {
-      NanReturnValue(NanUndefined());
+      args.GetReturnValue().Set(Nan::Undefined());
     } else {
-      return NanThrowError("unable to authenticate");
+      return Nan::ThrowError("unable to authenticate");
     }
   } else {
-    Local<Value> res = NanNewBufferHandle(reinterpret_cast<char*>(mac), 16);
-    NanReturnValue(NanNew(res));
+    v8::Local<v8::Value> res = Nan::NewBuffer(reinterpret_cast<char*>(mac), 16).ToLocalChecked();
+    args.GetReturnValue().Set(res);
   }
 }

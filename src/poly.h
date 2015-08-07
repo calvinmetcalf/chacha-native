@@ -15,7 +15,7 @@ class Poly : public node::ObjectWrap {
   static NAN_METHOD(New);
   static NAN_METHOD(Update);
   static NAN_METHOD(Finish);
-  static v8::Persistent<v8::Function> constructor;
+  static Nan::Persistent<v8::Function> constructor;
   poly1305_context ctx_;
 };
 

@@ -17,7 +17,7 @@ class Legacy : public node::ObjectWrap {
   static NAN_METHOD(UpdateAad);
   static NAN_METHOD(Update);
   static NAN_METHOD(Finish);
-  static v8::Persistent<v8::Function> constructor;
+  static Nan::Persistent<v8::Function> constructor;
   chacha20_ctx ctx_;
   poly1305_context poly_;
   bool decrypt_;

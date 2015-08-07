@@ -1,73 +1,69 @@
 #include "chacha.h"
 
-using namespace v8;
 using namespace node;
-Persistent<Function> Chacha::constructor;
+Nan::Persistent<v8::Function> Chacha::constructor;
 
 Chacha::Chacha() {};
 Chacha::~Chacha() {};
-void Chacha::Init(Handle<Object> exports) {
-  NanScope();
+void Chacha::Init(v8::Local<v8::Object> exports) {
+  Nan::HandleScope scope;
 
   // Prepare constructor template
-  Local<FunctionTemplate> tpl = NanNew<FunctionTemplate>(New);
-  tpl->SetClassName(NanNew("Chacha"));
+  v8::Local<v8::FunctionTemplate> tpl = Nan::New<v8::FunctionTemplate>(New);
+  tpl->SetClassName(Nan::New("Chacha").ToLocalChecked());
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
   // Prototype
-  NODE_SET_PROTOTYPE_METHOD(tpl, "update", Update);
+  Nan::SetPrototypeMethod(tpl, "update", Update);
 
-  NanAssignPersistent(constructor, tpl->GetFunction());
-  exports->Set(NanNew("Chacha"), tpl->GetFunction());
+  constructor.Reset(tpl->GetFunction());
+  exports->Set(Nan::New("Chacha").ToLocalChecked(), tpl->GetFunction());
 }
 
-NAN_METHOD(Chacha::New) {
-  NanScope();
+void Chacha::New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
 
-  if (args.IsConstructCall()) {
-    if (args.Length() != 2 ||
-        !Buffer::HasInstance(args[0]) ||
-        !Buffer::HasInstance(args[1])) {
-      return NanThrowError("must supply 2 buffers");
+  if (info.IsConstructCall()) {
+    if (info.Length() != 2 ||
+        !Buffer::HasInstance(info[0]) ||
+        !Buffer::HasInstance(info[1])) {
+      return Nan::ThrowError("must supply 2 buffers");
     }
-    unsigned char* key = reinterpret_cast<unsigned char*>(Buffer::Data(args[0]));
-    unsigned char* iv = reinterpret_cast<unsigned char*>(Buffer::Data(args[1]));
-    size_t len = Buffer::Length(args[0]);
-    size_t ivlen = Buffer::Length(args[1]);
+    unsigned char* key = reinterpret_cast<unsigned char*>(Buffer::Data(info[0]));
+    unsigned char* iv = reinterpret_cast<unsigned char*>(Buffer::Data(info[1]));
+    size_t len = Buffer::Length(info[0]);
+    size_t ivlen = Buffer::Length(info[1]);
     if (len != 32) {
-      return NanThrowError("invalid key length");
+      return Nan::ThrowError("invalid key length");
     }
     if (ivlen != 12) {
-      return NanThrowError("invalid nonce length");
+      return Nan::ThrowError("invalid nonce length");
     }
     chacha20_ctx ctx;
     chacha20_setup(&ctx, key, len, iv);
     Chacha* obj = new Chacha();
     obj->ctx_ = ctx;
-    obj->Wrap(args.This());
-    NanReturnValue(args.This());
+    obj->Wrap(info.This());
+    info.GetReturnValue().Set(info.This());
   } else {
     const int argc = 2;
-    Local<Value> argv[argc] = { args[0], args[1] };
-    Local<Function> cons = NanNew<Function>(constructor);
-    NanReturnValue(cons->NewInstance(argc, argv));
+    v8::Local<v8::Value> argv[argc] = { info[0], info[1] };
+    v8::Local<v8::Function> cons = Nan::New<v8::Function>(constructor);
+    info.GetReturnValue().Set(cons->NewInstance(argc, argv));
   }
 }
+void Chacha::Update(const Nan::FunctionCallbackInfo<v8::Value>& info) {
 
-NAN_METHOD(Chacha::Update) {
-  NanScope();
-
-  Chacha* obj = ObjectWrap::Unwrap<Chacha>(args.Holder());
-  if (args.Length() != 1 ||
-        !Buffer::HasInstance(args[0]) ) {
-      return NanThrowError("must supply buffer");
+  Chacha* obj = ObjectWrap::Unwrap<Chacha>(info.Holder());
+  if (info.Length() != 1 ||
+        !Buffer::HasInstance(info[0]) ) {
+      return Nan::ThrowError("must supply buffer");
     }
-  unsigned char* input = reinterpret_cast<unsigned char*>(Buffer::Data(args[0]));
-  size_t len = Buffer::Length(args[0]);
+  unsigned char* input = reinterpret_cast<unsigned char*>(Buffer::Data(info[0]));
+  size_t len = Buffer::Length(info[0]);
   unsigned char* out = new unsigned char[len];
   if (!chacha20_encrypt(&obj->ctx_, input, out, len)) {
-    return NanThrowError("counter exausted");
+    return Nan::ThrowError("counter exausted");
   };
-  Local<Value> res = NanNewBufferHandle(reinterpret_cast<char*>(out), len);
-  NanReturnValue(NanNew(res));
+  v8::Local<v8::Value> res = Nan::NewBuffer(reinterpret_cast<char*>(out), len).ToLocalChecked();
+  info.GetReturnValue().Set(res);
 }

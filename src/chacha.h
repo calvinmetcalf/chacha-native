@@ -14,7 +14,8 @@ class Chacha : public node::ObjectWrap {
 
   static NAN_METHOD(New);
   static NAN_METHOD(Update);
-  static v8::Persistent<v8::Function> constructor;
+  static Nan::Persistent<v8::Function> constructor;
+
   chacha20_ctx ctx_;
 };
 
