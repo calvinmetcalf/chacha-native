@@ -4,6 +4,7 @@
   "description": "native chacha20/poly1305 bindings in nodejs",
   "main": "lib",
   "gypfile": true,
+  "license": "MIT",
   "scripts": {
     "build": "node-gyp rebuild",
     "test": "node test.js | tspec"
