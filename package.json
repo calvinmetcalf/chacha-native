@@ -6,8 +6,7 @@
   "gypfile": true,
   "license": "MIT",
   "scripts": {
-    "build": "node-gyp rebuild",
-    "test": "node test.js | tspec"
+    "test": "node-gyp rebuild && node test.js | tspec"
   },
   "dependencies": {
     "bindings": "^1.2.1",
