@@ -33,7 +33,7 @@ void AEAD::New(const Nan::FunctionCallbackInfo<v8::Value>& args) {
     }
     unsigned char* key = reinterpret_cast<unsigned char*>(Buffer::Data(args[0]));
     unsigned char* iv = reinterpret_cast<unsigned char*>(Buffer::Data(args[1]));
-    bool decrypt = args[3]->IsUndefined() ? false : args[0]->BooleanValue();
+    bool decrypt = args[2]->IsUndefined() ? false : args[2]->BooleanValue();
     size_t len = Buffer::Length(args[0]);
     size_t ivlen = Buffer::Length(args[1]);
     if (len != 32) {
