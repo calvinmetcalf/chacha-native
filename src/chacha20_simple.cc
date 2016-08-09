@@ -43,6 +43,11 @@ void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const 
   ctx->available = 0;
 }
 
+static inline uint32_t ROTL32(uint32_t v, uint32_t n) {
+  return ((v) << (n)) | ((v) >> (32 - (n)));
+}
+
+
 #define QUARTERROUND(x, a, b, c, d) \
     x[a] += x[b]; x[d] = ROTL32(x[d] ^ x[a], 16); \
     x[c] += x[d]; x[b] = ROTL32(x[b] ^ x[c], 12); \
@@ -85,8 +90,10 @@ bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
 
 static inline void chacha20_xor(uint8_t *keystream, const uint8_t **in, uint8_t **out, size_t length)
 {
-  uint8_t *end_keystream = keystream + length;
-  do { *(*out)++ = *(*in)++ ^ *keystream++; } while (keystream < end_keystream);
+  #pragma clang loop interleave(enable)
+  for (size_t i = 0; i < length; i++) {
+     *(*out + i) = *(*in + i) ^ *(keystream + i);
+  }
 }
 
 bool chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t length)
@@ -102,6 +109,8 @@ bool chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t
       chacha20_xor(k + (sizeof(ctx->keystream)-ctx->available), &in, &out, amount);
       ctx->available -= amount;
       length -= amount;
+      in += amount;
+      out += amount;
     }
 
     //Then, handle new blocks
@@ -114,6 +123,8 @@ bool chacha20_encrypt(chacha20_ctx *ctx, const uint8_t *in, uint8_t *out, size_t
       chacha20_xor(k, &in, &out, amount);
       length -= amount;
       ctx->available = sizeof(ctx->keystream) - amount;
+      in += amount;
+      out += amount;
     }
   }
   return true;
