@@ -32,9 +32,75 @@ extern "C"
 {
 #endif
 
+// SSE2 stuff based on https://github.com/bitwiseshiftleft/crandom/
+#ifdef __SSE2__
+  #define SSE2 1
+  #define CONV 0
+  #include <emmintrin.h>
+# else
+  #define SSE2 0
+  #define CONV 1
+# endif
+#ifdef __SSE3__
+  #define SSE3 1
+  #include <tmmintrin.h>
+# else
+  #define SSE3 0
+# endif
+
+#define SSE (SSE2 || SSE3)
+
+# if CONV
+  static inline uint32_t ROTL32(uint32_t v, uint32_t n) {
+    return ((v) << (n)) | ((v) >> (32 - (n)));
+  }
+  #define QUARTERROUND(a, b, c, d) \
+      a += b; d = ROTL32(d ^ a, 16); \
+      c += d; b = ROTL32(b ^ c, 12); \
+      a += b; d = ROTL32(d ^ a, 8); \
+      c += d; b = ROTL32(b ^ c, 7);
+#endif
+
+#if SSE
+  static inline __m128i sse2_rotate(__m128i a, int r) {
+   return _mm_slli_epi32(a, r) ^ _mm_srli_epi32(a, 32-r);
+  }
+  #define shuffle(x,i) _mm_shuffle_epi32(x, \
+  i + ((i+1)&3)*4 + ((i+2)&3)*16 + ((i+3)&3)*64)
+
+  #define SHUFFLE(b, c, d)\
+    b = shuffle(b, 1);\
+    c = shuffle(c, 2);\
+    d = shuffle(d, 3);
+#endif
+
+# if SSE3
+  static const __m128i shuffle8  = { 0x0605040702010003ull, 0x0E0D0C0F0A09080Bull };
+  static const __m128i shuffle16 = { 0x0504070601000302ull, 0x0D0C0F0E09080B0Aull };
+
+  static inline void
+  round(__m128i *a, __m128i *b, __m128i *c, __m128i *d) {
+    *a = _mm_add_epi32(*a,*b); *d = _mm_shuffle_epi8(*d ^ *a, shuffle16);
+    *c = _mm_add_epi32(*c,*d); *b = sse2_rotate(*b ^ *c, 12);
+    *a = _mm_add_epi32(*a,*b); *d = _mm_shuffle_epi8( *d ^ *a, shuffle8);
+    *c = _mm_add_epi32(*c,*d); *b = sse2_rotate(*b ^ *c, 7);
+  }
+# else
+  #if SSE2
+      static inline void
+       round(__m128i *a, __m128i *b, __m128i *c, __m128i *d) {
+         *a = _mm_add_epi32(*a,*b); *d = sse2_rotate(*d ^ *a, 16);
+         *c = _mm_add_epi32(*c,*d); *b = sse2_rotate(*b ^ *c, 12);
+         *a = _mm_add_epi32(*a,*b); *d = sse2_rotate(*d ^ *a, 8);
+         *c = _mm_add_epi32(*c,*d); *b = sse2_rotate(*b ^ *c, 7);
+      }
+  #endif
+#endif
 typedef struct
 {
-  uint32_t schedule[16];
+  uint32_t key1[4] __attribute__ ((aligned (16))) ;
+  uint32_t key2[4] __attribute__ ((aligned (16))) ;
+  uint32_t nonce[4] __attribute__ ((aligned (16))) ;
   uint32_t keystream[16];
   size_t available;
 } chacha20_ctx;
