@@ -48,7 +48,7 @@ void Chacha::New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
     const int argc = 2;
     v8::Local<v8::Value> argv[argc] = { info[0], info[1] };
     v8::Local<v8::Function> cons = Nan::New<v8::Function>(constructor);
-    info.GetReturnValue().Set(cons->NewInstance(argc, argv));
+    info.GetReturnValue().Set(Nan::NewInstance(cons, argc, argv).ToLocalChecked());
   }
 }
 void Chacha::Update(const Nan::FunctionCallbackInfo<v8::Value>& info) {
