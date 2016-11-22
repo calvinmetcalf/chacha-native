@@ -3,7 +3,7 @@ chacha native
 [![Build Status](https://travis-ci.org/calvinmetcalf/chacha-native.svg)](https://travis-ci.org/calvinmetcalf/chacha-native)
 
 Node bindings for Chacha20/poly1305, api is identical to [my pure JavaScript library](https://github.com/calvinmetcalf/chacha20poly1305), Chacha20 is based
-on [this implementation](http://chacha20.insanecoding.org/) with Poly1305 based on [poly1305-donna](https://github.com/floodyberry/poly1305-donna) by way of [libressl](https://github.com/libressl-portable/openbsd/blob/6e5b37ae2618b181b18de9cb33262259e681fb85/src/lib/libssl/src/crypto/poly1305/poly1305.h). By default it implements the
+on [this implementation](http://chacha20.insanecoding.org/) with SSE stuff based on [this implementation](https://github.com/bitwiseshiftleft/crandom/) with Poly1305 based on [poly1305-donna](https://github.com/floodyberry/poly1305-donna) by way of [libressl](https://github.com/libressl-portable/openbsd/blob/6e5b37ae2618b181b18de9cb33262259e681fb85/src/lib/libssl/src/crypto/poly1305/poly1305.h). By default it implements the
 [IETF](https://tools.ietf.org/html/draft-irtf-cfrg-chacha20-poly1305-10) version
 of the chacha20 poly1305 aead, but the legacy method does the version compatibale with borringssl and others.
 

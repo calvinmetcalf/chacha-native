@@ -128,13 +128,13 @@ bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
     SHUFFLE(d, c, b)
   }
   i = 0;
-  ap = _mm_add_epi32(a, ap);
+  ap = add(a, ap);
   uint32_t *ar = (uint32_t *) &ap;
-  bp = _mm_add_epi32(b, bp);
+  bp = add(b, bp);
   uint32_t *br = (uint32_t *) &bp;
-  cp = _mm_add_epi32(c, cp);
+  cp = add(c, cp);
   uint32_t *cr = (uint32_t *) &cp;
-  dp = _mm_add_epi32(d, dp);
+  dp = add(d, dp);
   uint32_t *dr = (uint32_t *) &dp;
   while (i < 4)
   {

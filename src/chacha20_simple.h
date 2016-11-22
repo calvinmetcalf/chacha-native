@@ -20,6 +20,9 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <string.h>
 #include <stdbool.h>
 
+#define INTRINSIC \
+static inline __attribute__((__gnu_inline__, __always_inline__))
+#define add _mm_add_epi32
 #define LE(p) (((uint32_t)((p)[0])) | ((uint32_t)((p)[1]) << 8) | ((uint32_t)((p)[2]) << 16) | ((uint32_t)((p)[3]) << 24))
 #define FROMLE(b, i) (b)[0] = i & 0xFF; (b)[1] = (i >> 8) & 0xFF; (b)[2] = (i >> 16) & 0xFF; (b)[3] = (i >> 24) & 0xFF;
 
@@ -47,7 +50,16 @@ extern "C"
 # else
   #define SSE3 0
 # endif
-
+#ifdef __XOP__
+  INTRINSIC ssereg xop_rotate(int amount, ssereg x) {
+    ssereg out;
+    asm ("vprotd %1, %2, %0" : "=x"(out) : "x"(x), "g"(amount));
+    return out;
+  }
+  #define XOP 1
+# else
+  #define XOP 0
+# endif
 #define SSE (SSE2 || SSE3)
 
 # if CONV
@@ -62,7 +74,7 @@ extern "C"
 #endif
 
 #if SSE
-  static inline __m128i sse2_rotate(__m128i a, int r) {
+  INTRINSIC __m128i sse2_rotate(__m128i a, int r) {
    return _mm_slli_epi32(a, r) ^ _mm_srli_epi32(a, 32-r);
   }
   #define shuffle(x,i) _mm_shuffle_epi32(x, \
@@ -80,20 +92,29 @@ extern "C"
 
   static inline void
   round(__m128i *a, __m128i *b, __m128i *c, __m128i *d) {
-    *a = _mm_add_epi32(*a,*b); *d = _mm_shuffle_epi8(*d ^ *a, shuffle16);
-    *c = _mm_add_epi32(*c,*d); *b = sse2_rotate(*b ^ *c, 12);
-    *a = _mm_add_epi32(*a,*b); *d = _mm_shuffle_epi8( *d ^ *a, shuffle8);
-    *c = _mm_add_epi32(*c,*d); *b = sse2_rotate(*b ^ *c, 7);
+    *a = add(*a,*b); *d = _mm_shuffle_epi8(*d ^ *a, shuffle16);
+    *c = add(*c,*d); *b = sse2_rotate(*b ^ *c, 12);
+    *a = add(*a,*b); *d = _mm_shuffle_epi8( *d ^ *a, shuffle8);
+    *c = add(*c,*d); *b = sse2_rotate(*b ^ *c, 7);
   }
 # else
   #if SSE2
+    #if XOP
+    static inline void
+     round(__m128i *a, __m128i *b, __m128i *c, __m128i *d) {
+       *a = add(*a,*b); *d = xop_rotate(*d ^ *a, 16);
+       *c = add(*c,*d); *b = xop_rotate(*b ^ *c, 12);
+       *a = add(*a,*b); *d = xop_rotate(*d ^ *a, 8);
+       *c = add(*c,*d); *b = xop_rotate(*b ^ *c, 7);
+    # else
       static inline void
        round(__m128i *a, __m128i *b, __m128i *c, __m128i *d) {
-         *a = _mm_add_epi32(*a,*b); *d = sse2_rotate(*d ^ *a, 16);
-         *c = _mm_add_epi32(*c,*d); *b = sse2_rotate(*b ^ *c, 12);
-         *a = _mm_add_epi32(*a,*b); *d = sse2_rotate(*d ^ *a, 8);
-         *c = _mm_add_epi32(*c,*d); *b = sse2_rotate(*b ^ *c, 7);
+         *a = add(*a,*b); *d = sse2_rotate(*d ^ *a, 16);
+         *c = add(*c,*d); *b = sse2_rotate(*b ^ *c, 12);
+         *a = add(*a,*b); *d = sse2_rotate(*d ^ *a, 8);
+         *c = add(*c,*d); *b = sse2_rotate(*b ^ *c, 7);
       }
+    #endif
   #endif
 #endif
 typedef struct
