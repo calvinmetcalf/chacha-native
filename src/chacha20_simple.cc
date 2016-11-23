@@ -44,7 +44,6 @@ void chacha20_setup(chacha20_ctx *ctx, const uint8_t *key, size_t length, const 
 uint32_t const constants[4] __attribute__ ((aligned (16))) = {0x61707865, 0x3320646e, 0x79622d32, 0x6b206574};
 bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
 {
-  uint32_t *const nonce = ctx->nonce;
   int i = 10;
 
   memcpy(output, constants, sizeof(constants));
@@ -97,7 +96,7 @@ bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
   This implementation will remain compatible with the official up to 2^64 blocks, and past that point, the official is not intended to be used.
   This implementation with this change also allows this algorithm to become compatible for a Fortuna-like construct.
   */
-  if (!++nonce[0]) { return false; }
+  if (!++ctx->nonce[0]) { return false; }
   return true;
 }
 # endif
@@ -105,7 +104,6 @@ bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
 #if SSE
 bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
 {
-  uint32_t *const nonce = ctx->nonce;
   int i = 10;
   __m128i a = {0x3320646e61707865ull, 0x6b20657479622d32ull};
   __m128i b = {};
@@ -156,7 +154,7 @@ bool chacha20_block(chacha20_ctx *ctx, uint32_t output[16])
     FROMLE((uint8_t *)(output+i), dr[i % 4]);
     i++;
   }
-  if (!++nonce[0]) { return false; }
+  if (!++ctx->nonce[0]) { return false; }
   return true;
 }
 #endif
