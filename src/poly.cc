@@ -20,7 +20,7 @@ void Poly::Init(v8::Local<v8::Object> exports) {
   Nan::SetPrototypeMethod(tpl, "finish", Finish);
 
   constructor.Reset(tpl->GetFunction(context).ToLocalChecked());
-  exports->Set(context, Nan::New("Poly").ToLocalChecked(), tpl->GetFunction(context).ToLocalChecked());
+  (void) exports->Set(context, Nan::New("Poly").ToLocalChecked(), tpl->GetFunction(context).ToLocalChecked());
 }
 
 void Poly::New(const Nan::FunctionCallbackInfo<v8::Value>& args) {

@@ -18,7 +18,7 @@ void Chacha::Init(v8::Local<v8::Object> exports) {
   Nan::SetPrototypeMethod(tpl, "update", Update);
 
   constructor.Reset(tpl->GetFunction(context).ToLocalChecked());
-  exports->Set(context, Nan::New("Chacha").ToLocalChecked(), tpl->GetFunction(context).ToLocalChecked());
+  (void) exports->Set(context, Nan::New("Chacha").ToLocalChecked(), tpl->GetFunction(context).ToLocalChecked());
 }
 
 void Chacha::New(const Nan::FunctionCallbackInfo<v8::Value>& info) {
