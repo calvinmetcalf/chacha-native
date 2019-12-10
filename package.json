@@ -17,7 +17,7 @@
   "devDependencies": {
     "chacha": "^1.1.2",
     "tap-spec": "^2.2.2",
-    "tape": "^3.5.0"
+    "tape": "^4.11.0"
   },
   "repository": {
     "type": "git",
